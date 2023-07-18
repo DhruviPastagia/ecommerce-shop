@@ -1,0 +1,174 @@
+import React, { Fragment, useEffect, useState } from "react";
+import MetaData from "../../more/Metadata";
+import { Link } from "react-router-dom";
+import { Typography } from "@mui/material";
+import SideBar from "./Sidebar";
+import {
+  getOrderDetails,
+  clearErrors,
+  updateOrder,
+} from "../../actions/OrderAction";
+import { useSelector, useDispatch } from "react-redux";
+import Loading from "../../more/Loader";
+import AccountTreeIcon from "@mui/icons-material/AccountTree";
+import { Button } from "@mui/material";
+import { UPDATE_ORDER_RESET } from "../../constans/OrderConstans";
+import "./UpdateOrder.css";
+import { ToastContainer, toast } from "react-toastify";
+
+const UpdateOrder = ({ history, match }) => {
+  const { order, error, loading } = useSelector((state) => state.myOrderDetails) || {};
+  const { error: updateError, isUpdated } = useSelector((state) => state.updateOrder) || {};
+  const dispatch = useDispatch();
+  const [status, setStatus] = useState("");
+
+  useEffect(() => {
+    if (error) {
+      toast.error(error);
+      dispatch(clearErrors());
+    }
+    if (updateError) {
+      toast.error(updateError);
+      dispatch(clearErrors());
+    }
+    if (isUpdated) {
+      toast.success("Order Updated Successfully");
+      dispatch({ type: UPDATE_ORDER_RESET });
+    }
+
+    dispatch(getOrderDetails(match.params.id));
+  }, [dispatch, error, match.params.id, isUpdated, updateError]);
+
+  const updateOrderSubmitHandler = (e) => {
+    e.preventDefault();
+    const myForm = new FormData();
+    myForm.set("status", status);
+
+    dispatch(updateOrder(match.params.id, myForm));
+  };
+
+  return (
+    <Fragment>
+      <MetaData title="Process Order" />
+      <div className="dashboard">
+        <SideBar />
+        <div className="newProductContainer">
+          {loading ? (
+            <Loading />
+          ) : (
+            <div className="confirmOrderPage">
+              <div className="confirmShippingArea">
+                <Typography>Shipping Info</Typography>
+                <div className="orderDetailsContainerBox">
+                  {order && order.user && (
+                    <div>
+                      <p>Name:</p>
+                      <span>{order.user.name}</span>
+                    </div>
+                  )}
+                  {order && order.shippingInfo && (
+                    <div>
+                      <p>Phone:</p>
+                      <span>{order.shippingInfo.phoneNo}</span>
+                      <p>Address:</p>
+                      <span>{`${order.shippingInfo.address}, ${order.shippingInfo.state}`}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+               
+               
+
+              <div className="confirmCartItems">
+                <Typography>Your Cart Items:</Typography>
+                <div className="confirmCartItemsContainer">
+                  {order &&
+                    order.orderItems &&
+                    order.orderItems.map((item) => (
+                      <div key={item.productId}>
+                        <img src={item.productImage} alt="Product" />
+                        <Link to={`/product/${item.productId}`}>
+                          {item.productName}
+                        </Link>
+                        <span>
+                          {item.quantity} X $
+                          {item.productPrice && item.productPrice.toFixed(2)} ={" "}
+                          <b>
+                            $
+                            {item.productPrice &&
+                              (item.productPrice * item.quantity).toFixed(2)}
+                          </b>
+                        </span>
+                        {item.stock && <span>Stock: {item.stock}</span>}
+                      </div>
+                    ))}
+                </div>
+              </div>
+
+              <div className="confirmOrderStatus">
+                <Typography>Order Status</Typography>
+                <div className="orderDetailsContainerBox">
+                  <div>
+                    <p
+                      className={
+                        order && order.orderStatus === "Delivered"
+                          ? "greenColor"
+                          : "redColor"
+                      }
+                    >
+                      {order && order.orderStatus}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <form
+                  className="updateOrderForm"
+                  onSubmit={updateOrderSubmitHandler}
+                >
+                  <h1>Process Order</h1>
+                  <div>
+                    <AccountTreeIcon />
+                    <select onChange={(e) => setStatus(e.target.value)}>
+                      <option value="">Choose Status</option>
+                      {order && order.orderStatus !== "Processing" && (
+                        <option value="Processing">Processing</option>
+                      )}
+                      {order && order.orderStatus !== "Shipped" && (
+                        <option value="Shipped">Shipped</option>
+                      )}
+                      {order && order.orderStatus !== "Delivered" && (
+                        <option value="Delivered">Delivered</option>
+                      )}
+                    </select>
+                  </div>
+                  <Button
+                    id="createProductBtn"
+                    type="submit"
+                    disabled={loading || status === ""}
+                  >
+                    Process
+                  </Button>
+                </form>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+      <ToastContainer
+        position="bottom-center"
+        autoClose={5000}
+        hideProgressBar={false}
+        newestOnTop={false}
+        closeOnClick
+        rtl={false}
+        pauseOnFocusLoss
+        draggable
+        pauseOnHover
+      />
+    </Fragment>
+  );
+};
+
+export default UpdateOrder;
